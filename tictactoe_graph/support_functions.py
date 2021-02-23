@@ -180,7 +180,90 @@ class Player_vs_itself:
             print(self.id, current_state, self.qtable[current_state], new_state, action, old_value, new_value)
         
         return game
-    
+
+class Player_vs_tree:
+    def __init__(self, id, alpha = 0.5, gamma = 0.6, epsilon = 0.1, tree_file = 'tree_tctoe_3x3.pkl'):
+        self.qtable = {}
+        self.id = id
+        self.alpha = alpha
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.our_reward_lut = {10: -10, 5:5, 0:0, -10:10}
+        
+        print('Loading tree...')
+        with open(tree_file, 'rb') as f:
+            self.tree = dill.load(f)
+            
+        print('Precomputing best moves...')
+        all_states = []
+        for length in range(1,9):
+            tree_states = [''.join(state) for state in list(itertools.permutations(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'], r=length))]
+            all_states.extend(tree_states)
+
+        for state in tqdm(all_states):
+            try:
+                move = determine_move(self.tree, state, False) 
+            except:
+                pass
+    def get_qtable(self):
+        return self.qtable
+    def get_id(self):
+        return self.id
+    def set_params(self, 
+                   alpha = 0.5,       # How fast do we learn from new info
+                   gamma = 0.6,       # How much are we focused on the short or the long term. 1 = max long term, 0 is max short term
+                   epsilon = 0.1):    # exploration vs exploitation
+        self.alpha = alpha
+        self.gamma = gamma
+        self.epsilon = epsilon
+    def make_move(self, game, verbose=False):
+        if game.is_endstate():
+            # If the game is done by the time we get to make a move, simply skip this step
+            return game
+        # Make a choice what move to take next
+        possible_moves = game.get_possible_next_moves()
+        current_state = game.get_current_state()
+        
+        # If the current_state does not exist in the qtable, insert it
+        if current_state not in self.qtable:
+            # New entry in the qtable, init to zero. 
+            #self.qtable[current_state] = dict(zip([current_state + move for move in possible_moves], 
+            #                                      np.random.uniform(0, 0.1, len(possible_moves))))  # initialize on a small amount of random noise. Promotes varyiety
+            self.qtable[current_state] = dict(zip(possible_moves, 
+                                                  np.zeros(len(possible_moves))))  
+            
+        # Insert epsilon choice here, exploit or explore
+        if random.uniform(0, 1) < self.epsilon:
+            new_state, reward, action = game.make_move(self.id, random.choice(possible_moves))   # Random choice
+        else:  # Exploit our qtable
+            new_state, reward, action = game.make_move(self.id, keywithmaxval(self.qtable[current_state]))   # Optimal choice
+        
+        if self.epsilon == 0:    # If we set epsilon to 0, we only want to play. No updating needed. 
+            return game
+        
+        # When we play against the tree, we make the tree give us the next move it makes
+        # so in essence we treat the tree as a black box that also changes the worldstate. 
+        # And we also only learn from our own moves, and no longer access the alternative
+        # qtable. 
+        new_state_after_tree, reward_after_tree, action_after_tree = game.make_move(-1, determine_move(self.tree, game.get_moves_made(), False))
+        
+        # Update the qtable
+        old_value = self.qtable[current_state][action]
+        try:
+            next_max = max(self.qtable[new_state_after_tree].values())
+        except KeyError:  # In case the tree for next state has not been made yet, simply return 0
+            next_max = 0
+        # Note that the reward we actually get is the reward after the tree has made its move. We then reverse that reward vs the lut to get our own. 
+        new_value = (1 - self.alpha) * old_value + self.alpha * (self.our_reward_lut[reward_after_tree] + self.gamma * next_max)
+        if verbose:
+            print('old: ', old_value, 'new_value: ', new_value, 'alpha: ', self.alpha, 'reward: ', self.our_reward_lut[reward_after_tree], 'gamma: ', self.gamma, 'next_max: ', next_max)
+        self.qtable[current_state][action] = new_value
+
+        if verbose:
+            print(self.id, current_state, self.qtable[current_state], new_state_after_tree, action, old_value, new_value)
+        
+        return game    
+
 class Player_tree:
     def __init__(self, tree, id):
         self.tree = tree
