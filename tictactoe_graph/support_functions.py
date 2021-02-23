@@ -1,3 +1,65 @@
+import random
+from tqdm import tqdm
+import numpy as np
+import pandas as pd
+import copy
+import hashlib
+
+class Tictoe:
+    def __init__(self, size):
+        self.size = size
+        self.board_size = size*size
+        self.board = np.zeros(self.board_size)
+        self.letters_to_move = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'][:self.board_size]
+        self.possible_next_moves = copy.deepcopy(self.letters_to_move)
+        self.moves_made = ''
+    def reset_board(self):
+        self.board = np.zeros(self.board_size)
+        self.letters_to_move = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'][:self.board_size]
+        self.possible_next_moves = copy.deepcopy(self.letters_to_move)
+        self.moves_made = ''
+    def get_board(self):
+        return self.board.reshape([self.size, self.size])
+    def make_move(self, who, where, verbose=False):
+        self.board[self.letters_to_move.index(where)] = who
+        self.moves_made += where
+        self.possible_next_moves.remove(where)
+        if verbose:
+            print(self.get_board())
+            print('Is game done?: ', self.is_endstate())
+        return [self.get_current_state(), self.get_reward(who), where]
+    def get_sums_of_board(self):
+        local_board = self.get_board()
+        return np.concatenate([local_board.sum(axis=0),             # columns
+                               local_board.sum(axis=1),             # rows
+                               np.trace(local_board),               # diagonal
+                               np.trace(np.fliplr(local_board))], axis=None)   # other diagonal
+    def is_endstate(self):
+        someone_won = len(np.intersect1d((self.size, -self.size), self.get_sums_of_board())) > 0
+        draw = np.count_nonzero(self.board) == (self.size * self.size) - 1
+        return someone_won or draw
+    def get_reward(self, who):
+        sums = self.get_sums_of_board()
+        if self.size in sums:       # The 1 player won
+            #print('1.', end='')
+            return who * 10
+        elif -self.size in sums:    # The -1 player won
+            #print('-1.', end='')
+            return who * -10
+        elif np.count_nonzero(self.board) == (self.size * self.size) - 1:  # Draw
+            #print('0.', end='')
+            return 5
+        else:
+            return 0  # Favor shorter games, i.e. taking the fastest road to victory. 
+    def get_moves_made(self):
+        return self.moves_made
+    def get_current_state(self):
+        return hashlib.sha1(self.get_board()).hexdigest()
+    def get_possible_next_states(self):
+        return [self.moves_made + next_move for next_move in self.possible_next_moves]
+    def get_possible_next_moves(self):
+        return self.possible_next_moves.copy()  # Make a copy to ensures things work out in the game loop when we make the next move
+
 def add_options_to_node(tree, node, tt_data, player, remaining_options):
     for option in remaining_options:
         local_tt_data = copy.deepcopy(tt_data)           # To prevent changing these values in other branches of the tree
@@ -48,9 +110,6 @@ def determine_move(tree, current_id, is_max):
         return moves[raw_scores.index(max(raw_scores))]
     else:
         return moves[raw_scores.index(min(raw_scores))]
-    
-import random
-from tqdm import tqdm
 
 def keywithmaxval(d):
      """ a) create a list of the dict's keys and values; 
