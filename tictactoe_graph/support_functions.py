@@ -116,13 +116,14 @@ def keywithmaxval(d):
          b) return the key with the max value
          
          
-     Based on https://stackoverflow.com/questions/268272/getting-key-with-maximum-value-in-dictionary"""  
+     Based on https://stackoverflow.com/questions/268272/getting-key-with-maximum-value-in-dictionary
+     If we get multiple max values, we randomly choose which key to return. """  
      k=list(d.keys())
      # boltzmann
      v = np.array(list(d.values()))
      return k[int(random.choice(np.argwhere(v == np.amax(v))))]  # If there are multiple max values, choose randomly
 
-class Player:
+class Player_vs_itself:
     def __init__(self, id, alpha = 0.5, gamma = 0.6, epsilon = 0.1):
         self.qtable = {}
         self.id = id
@@ -165,12 +166,6 @@ class Player:
             return game
         
         # Update the qtable
-        # Example qtable entry
-        #  
-        #  qtable['abd'] = {'abde': 2.1, 'abdf': 1.3, etc}
-        # 
-        # where 'abde': 2.1 is the q-value of taking action 'e' in state 'abd'. 
-        # Note that the qtable is ragged. Not all moves are possible from each state
         old_value = self.qtable[current_state][action]
         try:
             next_max = max(-np.array(list(opponent_qtable[new_state].values())))
@@ -185,7 +180,7 @@ class Player:
             print(self.id, current_state, self.qtable[current_state], new_state, action, old_value, new_value)
         
         return game
-
+    
 class Player_tree:
     def __init__(self, tree, id):
         self.tree = tree
@@ -196,7 +191,7 @@ class Player_tree:
         else:
             return determine_move(self.tree, moves_made, True)
 
-def play_tictactoe(no_episodes, player1, player2, verbose=False):
+def play_tictactoe_vs_itself(no_episodes, player1, player2, verbose=False):
     tactoe = Tictoe(3)       
 
     p1_rewards = np.zeros(no_episodes)
