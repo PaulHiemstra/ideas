@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 import copy
 import hashlib
+import dill
+import itertools
 
 class Tictoe:
     def __init__(self, size):
@@ -109,19 +111,7 @@ def determine_move(tree, current_id, is_max):
     if is_max:
         return moves[raw_scores.index(max(raw_scores))]
     else:
-        return moves[raw_scores.index(min(raw_scores))]
-
-def keywithmaxval(d):
-     """ a) create a list of the dict's keys and values; 
-         b) return the key with the max value
-         
-         
-     Based on https://stackoverflow.com/questions/268272/getting-key-with-maximum-value-in-dictionary
-     If we get multiple max values, we randomly choose which key to return. """  
-     k=list(d.keys())
-     # boltzmann
-     v = np.array(list(d.values()))
-     return k[int(random.choice(np.argwhere(v == np.amax(v))))]  # If there are multiple max values, choose randomly
+        return moves[raw_scores.index(min(raw_scores))]   
 
 class Player_vs_itself:
     def __init__(self, id, alpha = 0.5, gamma = 0.6, epsilon = 0.1):
@@ -182,29 +172,14 @@ class Player_vs_itself:
         return game
 
 class Player_vs_tree:
-    def __init__(self, id, alpha = 0.5, gamma = 0.6, epsilon = 0.1, tree_file = 'tree_tctoe_3x3.pkl'):
+    def __init__(self, id, alpha = 0.5, gamma = 0.6, epsilon = 0.1):
         self.qtable = {}
         self.id = id
         self.alpha = alpha
         self.gamma = gamma
         self.epsilon = epsilon
         self.our_reward_lut = {10: -10, 5:5, 0:0, -10:10}
-        
-        print('Loading tree...')
-        with open(tree_file, 'rb') as f:
-            self.tree = dill.load(f)
-            
-        print('Precomputing best moves...')
-        all_states = []
-        for length in range(1,9):
-            tree_states = [''.join(state) for state in list(itertools.permutations(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'], r=length))]
-            all_states.extend(tree_states)
-
-        for state in tqdm(all_states):
-            try:
-                move = determine_move(self.tree, state, False) 
-            except:
-                pass
+        self.tree = tree
     def get_qtable(self):
         return self.qtable
     def get_id(self):
