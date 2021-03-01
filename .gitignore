@@ -5,3 +5,5 @@ player1.pkl
 good_rl_model_based_on_tree.pkl
 __pycache__
 data
+plots
+model.pt
