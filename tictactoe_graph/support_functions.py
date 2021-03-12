@@ -53,7 +53,7 @@ class Tictoe:
             #print('0.', end='')
             return 5
         else:
-            return 0  # Favor shorter games, i.e. taking the fastest road to victory. 
+            return 0  
     def get_moves_made(self):
         return self.moves_made
     def get_current_state(self):
