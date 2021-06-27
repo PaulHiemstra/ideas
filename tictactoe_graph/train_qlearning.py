@@ -48,6 +48,7 @@ for ep_idx in tqdm(range(no_episodes)):
         plots[frame_counter] = player_tree.plot_qtable()
         frame_counter += 1
     tictactoe.reset_board()
+
 print('Training finished...')
 print('Generating frames...')
 from tqdm.contrib.concurrent import process_map  # or thread_map
